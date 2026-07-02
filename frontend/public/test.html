@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Test</title></head>
+<body>
+  <h1 style="color:green">Server works!</h1>
+  <div id="root">loading...</div>
+  <script type="module">
+    import React from '/node_modules/.vite/deps/react.js?v=9d1f218a'
+    import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js?v=f5cfa9b2'
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      React.createElement('h1', {style:{color:'blue'}}, 'React works!')
+    )
+  </script>
+</body>
+</html>

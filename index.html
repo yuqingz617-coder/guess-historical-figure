@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算一算你适合居住的城市</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f0eb;
+    --card-bg: #ffffff;
+    --text: #2c2c2c;
+    --text-secondary: #6b6b6b;
+    --accent: #e8734a;
+    --accent-dim: #fce4d8;
+    --option-bg: #faf7f4;
+    --option-hover: #fef0e8;
+    --option-selected: #e8734a;
+    --option-selected-text: #fff;
+    --progress-bg: #e0dbd5;
+    --progress-fill: #e8734a;
+    --tag-bg: #fef4ed;
+    --tag-text: #c56038;
+    --shadow: 0 2px 16px rgba(0,0,0,0.06);
+    --radius: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px 16px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding-top: 20px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--text);
+  }
+  .header .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  /* Progress Bar */
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--progress-fill);
+    border-radius: 3px;
+    transition: width 0.35s ease;
+  }
+  .progress-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* Question Card */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    box-shadow: var(--shadow);
+  }
+  .question-num {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .question-text {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+
+  /* Options */
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--option-bg);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 15px;
+    line-height: 1.4;
+    user-select: none;
+  }
+  .option:hover {
+    background: var(--option-hover);
+    border-color: var(--accent-dim);
+  }
+  .option.selected {
+    background: var(--option-selected);
+    color: var(--option-selected-text);
+    border-color: var(--option-selected);
+    font-weight: 600;
+  }
+  .option .letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.06);
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .option.selected .letter {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+  }
+
+  /* Generate Button */
+  .btn-generate {
+    display: none;
+    width: 100%;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+  }
+  .btn-generate:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(232,115,74,0.3);
+  }
+  .btn-generate:active {
+    transform: translateY(0);
+  }
+  .btn-generate.loading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .btn-generate.visible {
+    display: block;
+  }
+
+  /* Report Card */
+  .report {
+    display: none;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .report.visible {
+    display: block;
+  }
+  .report-city {
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .report-match {
+    font-size: 56px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .report-match-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .report-tags {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .report-tag {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .report-chart-wrap {
+    max-width: 340px;
+    margin: 0 auto 24px;
+  }
+  .report-chart-wrap canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+  .report-reason {
+    text-align: left;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text);
+    background: #fdfaf7;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 3px solid var(--accent);
+  }
+  .report-share-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .btn-restart {
+    display: inline-block;
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 2px solid var(--progress-bg);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-restart:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Loading Spinner */
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Fade transitions */
+  .fade-enter {
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 400px) {
+    .header h1 { font-size: 22px; }
+    .question-text { font-size: 18px; }
+    .report-city { font-size: 30px; }
+    .report-match { font-size: 46px; }
+    .card { padding: 22px 18px; }
+    .report { padding: 26px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>🏙️ 算一算你适合居住的城市</h1>
+    <p class="subtitle">6 道灵魂问题 · AI 为你匹配理想之城</p>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+    <span class="progress-label" id="progressLabel">0/6</span>
+  </div>
+
+  <!-- Question Card -->
+  <div class="card fade-enter" id="questionCard">
+    <div class="question-num" id="questionNum">QUESTION 1</div>
+    <div class="question-text" id="questionText"></div>
+    <div class="options" id="optionsWrap"></div>
+  </div>
+
+  <!-- Generate Button -->
+  <button class="btn-generate" id="btnGenerate" onclick="generateReport()">
+    生成我的城市报告 ✨
+  </button>
+
+  <!-- Report Card -->
+  <div class="report" id="reportCard">
+    <div class="report-city" id="reportCity"></div>
+    <div class="report-match" id="reportMatch"></div>
+    <div class="report-match-label">匹配度</div>
+    <div class="report-tags" id="reportTags"></div>
+    <div class="report-chart-wrap">
+      <canvas id="radarChart"></canvas>
+    </div>
+    <div class="report-reason" id="reportReason"></div>
+    <p class="report-share-hint">📸 长按或截图保存你的城市报告，分享给朋友！</p>
+    <button class="btn-restart" onclick="restart()">🔄 重新测试</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Data
+// ============================================================
+const QUESTIONS = [
+  {
+    text: "如果可以瞬间移动，你最想先去哪儿？",
+    options: [
+      "凌晨三点的街边烧烤摊",
+      "雪山之巅看日出",
+      "海岛沙滩躺平",
+      "古镇小巷里迷路",
+      "哪儿都不去，躺在床上刷手机挺好的",
+    ],
+  },
+  {
+    text: "你的钱包失忆了，里面只剩三位数，你会？",
+    options: [
+      "打个车去吃顿好的",
+      "买张彩票赌一把",
+      "买点食材给自己做顿饭",
+      "存起来等着它自己想起来",
+      "宅家熬两周",
+    ],
+  },
+  {
+    text: "你的手机只能留一个 App，你会选？",
+    options: [
+      "微信（人脉即一切）",
+      "地图（世界需要被看见）",
+      "音乐（灵魂需要BGM）",
+      "外卖（懒是第一天性）",
+      "短视频 App（不出门也能快乐）",
+    ],
+  },
+  {
+    text: "朋友描述你，用得最多的词是？",
+    options: ["会玩", "靠谱", "惊喜", "闷骚", "社恐"],
+  },
+  {
+    text: "你理想的周末是这样的？",
+    options: [
+      "五湖四海朋友聚会，热闹到半夜",
+      "一个人泡咖啡馆发呆看书",
+      "爬山/骑行/户外，动到虚脱",
+      "逛展/看剧/听讲座，文艺到骨子里",
+      "在家点上外卖、追剧到天亮",
+    ],
+  },
+  {
+    text: "如果城市是一个人，你觉得你俩的关系是？",
+    options: [
+      "一起搞钱的战友",
+      "彼此初恋般的甜蜜",
+      "相敬如宾的老伙计",
+      "三天一小吵五天一大吵但谁也离不开谁",
+      "不熟",
+    ],
+  },
+];
+
+const OPTION_LABELS = ["A", "B", "C", "D", "E"];
+
+const DIMENSIONS = ["烟火气", "自然感", "文艺值", "搞钱值", "松弛度", "社交力"];
+
+// ============================================================
+// State
+// ============================================================
+let currentQuestion = 0;
+let answers = new Array(6).fill(null);
+let radarChartInstance = null;
+
+// ============================================================
+// OpenRouter API
+// ============================================================
+const API_KEY = "sk-fMA19T8H90L5eCiegfT91GmIQ7yWD9Foi136B0wQkqSbgx0f";
+const API_URL = "https://api.moonshot.cn/v1/chat/completions";
+
+async function callAI(answers) {
+  const answerSummary = answers
+    .map(
+      (a, i) =>
+        `第${i + 1}题：「${QUESTIONS[i].text}」→ 选择了：${QUESTIONS[i].options[a]}`
+    )
+    .join("\n");
+
+  const systemPrompt = `你是一个有趣、犀利、有洞察力的城市匹配专家。你需要根据用户的6道灵魂问题答案，为用户推荐一个最适合的中国城市。
+
+你必须严格按照以下JSON格式返回（不要包含任何其他文字，只返回JSON）：
+
+{
+  "city": "城市名（如：成都、上海、大理、深圳、杭州、重庆、厦门、西安、长沙等，特殊情况下可以返回「家里蹲」作为彩蛋）",
+  "matchPercent": 85,
+  "tags": ["tag1", "tag2", "tag3"],
+  "userScores": [4.2, 3.0, 2.5, 3.8, 4.5, 3.2],
+  "cityScores": [4.5, 3.2, 1.8, 3.5, 4.0, 3.5],
+  "reason": "一段150字以内、有趣犀利、用第二人称的推荐理由"
+}
+
+字段说明：
+- city: 城市名，只有1个城市
+- matchPercent: 匹配度百分比，0-100的整数
+- tags: 3个简短的中文标签，每个2-4个字
+- userScores: 用户6个维度的得分（0.0~5.0），依次为 [烟火气, 自然感, 文艺值, 搞钱值, 松弛度, 社交力]
+- cityScores: 城市6个维度的得分（0.0~5.0），顺序同上
+- reason: 推荐理由，150字以内，有趣有洞察力
+
+推理维度说明：
+1. 烟火气 — 美食丰富、夜生活活跃、市井气息
+2. 自然感 — 绿化好、有山有水、适合户外
+3. 文艺值 — 展馆密集、艺术活动多、文化氛围
+4. 搞钱值 — 就业机会多、薪资高、节奏快
+5. 松弛度 — 生活成本适中、节奏慢、适合躺平
+6. 社交力 — 年轻人多、社交活动丰富
+
+请深入分析用户的6个答案，推理出用户的性格偏好，然后匹配合适的城市场景。结果要有趣、出乎意料但又有道理。`;
+
+  // Retry with exponential backoff, trying different models
+  const models = ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"];
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const model = models[Math.min(attempt, models.length - 1)];
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `以下是用户的6道题答案：\n\n${answerSummary}\n\n请根据以上答案，推理并返回JSON结果。` },
+          ],
+          temperature: 0.9,
+          max_tokens: 1024,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        // Extract JSON from the response (handle markdown code blocks)
+        let jsonStr = content.trim();
+        if (jsonStr.startsWith("```")) {
+          jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+        }
+        return JSON.parse(jsonStr);
+      }
+
+      if (response.status === 429) {
+        // Rate limited / overloaded — wait and retry
+        const waitMs = Math.pow(2, attempt) * 1500;
+        lastError = new Error(`服务器繁忙，${((attempt + 1) * 1.5).toFixed(1)}秒后自动重试…（第${attempt + 1}次）`);
+        // Update button text to show retry status
+        const btn = document.getElementById("btnGenerate");
+        btn.innerHTML = `<span class="spinner"></span>${lastError.message}`;
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+
+      const err = await response.text();
+      throw new Error(`API 请求失败 (${response.status}): ${err}`);
+    } catch (e) {
+      if (e.message.includes("服务器繁忙")) {
+        lastError = e;
+        continue;
+      }
+      throw e;
+    }
+  }
+
+  throw lastError || new Error("多次重试后仍然失败，请稍后再试");
+}
+
+// ============================================================
+// Render
+// ============================================================
+function renderQuestion() {
+  const q = QUESTIONS[currentQuestion];
+  document.getElementById("questionNum").textContent = `QUESTION ${currentQuestion + 1}`;
+  document.getElementById("questionText").textContent = q.text;
+
+  const wrap = document.getElementById("optionsWrap");
+  wrap.innerHTML = "";
+
+  q.options.forEach((opt, i) => {
+    const div = document.createElement("div");
+    div.className = "option" + (answers[currentQuestion] === i ? " selected" : "");
+    div.innerHTML = `<span class="letter">${OPTION_LABELS[i]}</span>${opt}`;
+    div.addEventListener("click", () => selectOption(i));
+    wrap.appendChild(div);
+  });
+
+  // Animate card
+  const card = document.getElementById("questionCard");
+  card.classList.remove("fade-enter");
+  void card.offsetWidth;
+  card.classList.add("fade-enter");
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const answered = answers.filter((a) => a !== null).length;
+  document.getElementById("progressFill").style.width = `${(answered / 6) * 100}%`;
+  document.getElementById("progressLabel").textContent = `${answered}/6`;
+
+  const btn = document.getElementById("btnGenerate");
+  if (answered === 6) {
+    btn.classList.add("visible");
+  } else {
+    btn.classList.remove("visible");
+  }
+}
+
+function selectOption(index) {
+  if (answers[currentQuestion] !== null && answers[currentQuestion] === index) {
+    // Allow re-selection? Keep current and auto-advance handled.
+    return;
+  }
+  answers[currentQuestion] = index;
+
+  // Re-render to show selection
+  const wrap = document.getElementById("optionsWrap");
+  const opts = wrap.querySelectorAll(".option");
+  opts.forEach((el, i) => {
+    el.className = "option" + (i === index ? " selected" : "");
+  });
+
+  updateProgress();
+
+  // Auto-advance after short delay
+  if (currentQuestion < 5) {
+    setTimeout(() => {
+      currentQuestion++;
+      renderQuestion();
+    }, 350);
+  }
+}
+
+async function generateReport() {
+  const btn = document.getElementById("btnGenerate");
+  btn.classList.add("loading");
+  btn.innerHTML = '<span class="spinner"></span>AI 正在为你推理最佳城市…';
+
+  try {
+    const result = await callAI(answers);
+
+    // Hide question area
+    document.getElementById("questionCard").style.display = "none";
+    btn.classList.remove("visible", "loading");
+
+    // Populate report
+    document.getElementById("reportCity").textContent = result.city;
+    document.getElementById("reportMatch").textContent = result.matchPercent + "%";
+    document.getElementById(
+      "reportReason"
+    ).innerHTML = `<p>${result.reason}</p>`;
+
+    const tagsWrap = document.getElementById("reportTags");
+    tagsWrap.innerHTML = result.tags
+      .map((t) => `<span class="report-tag">${t}</span>`)
+      .join("");
+
+    // Show report
+    const report = document.getElementById("reportCard");
+    report.classList.add("visible", "fade-enter");
+
+    // Draw radar chart
+    drawRadarChart(result.userScores, result.cityScores, result.city);
+
+    // Scroll to report
+    report.scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (err) {
+    alert("生成报告时出错：" + err.message);
+    btn.classList.remove("loading");
+    btn.innerHTML = "生成我的城市报告 ✨";
+  }
+}
+
+function drawRadarChart(userScores, cityScores, cityName) {
+  if (radarChartInstance) {
+    radarChartInstance.destroy();
+  }
+
+  const ctx = document.getElementById("radarChart").getContext("2d");
+  radarChartInstance = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: DIMENSIONS,
+      datasets: [
+        {
+          label: "你想要的",
+          data: userScores,
+          borderColor: "#e8734a",
+          backgroundColor: "rgba(232,115,74,0.08)",
+          borderWidth: 2.5,
+          borderDash: [],
+          pointBackgroundColor: "#e8734a",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          tension: 0.2,
+        },
+        {
+          label: cityName + "给的",
+          data: cityScores,
+          borderColor: "#5b8c85",
+          backgroundColor: "rgba(91,140,133,0.06)",
+          borderWidth: 2.5,
+          borderDash: [6, 3],
+          pointBackgroundColor: "#5b8c85",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          tension: 0.2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            usePointStyle: true,
+            pointStyleWidth: 10,
+            padding: 24,
+            font: { size: 13, weight: "600" },
+            color: "#2c2c2c",
+          },
+        },
+      },
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 5,
+          min: 0,
+          ticks: {
+            stepSize: 1,
+            display: true,
+            backdropColor: "transparent",
+            font: { size: 10 },
+            color: "#999",
+          },
+          pointLabels: {
+            font: { size: 13, weight: "600" },
+            color: "#2c2c2c",
+          },
+          grid: {
+            color: "rgba(0,0,0,0.06)",
+          },
+          angleLines: {
+            color: "rgba(0,0,0,0.06)",
+          },
+        },
+      },
+    },
+  });
+}
+
+function restart() {
+  answers = new Array(6).fill(null);
+  currentQuestion = 0;
+  document.getElementById("questionCard").style.display = "";
+  document.getElementById("reportCard").classList.remove("visible");
+  document.getElementById("btnGenerate").classList.remove("visible", "loading");
+  document.getElementById("btnGenerate").innerHTML = "生成我的城市报告 ✨";
+  renderQuestion();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ============================================================
+// Init
+// ============================================================
+renderQuestion();
+</script>
+</body>
+</html>
