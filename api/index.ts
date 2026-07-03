@@ -57,7 +57,15 @@ async function genFigure(guessed: string[]): Promise<[string, string]> {
   const name = parts[0]?.trim()
   const dynasty = parts[1]?.trim()
   if (name && dynasty) return [name, dynasty]
-  const fallbacks = [['李白','唐朝'],['苏轼','宋朝'],['秦始皇','秦朝'],['诸葛亮','三国'],['武则天','唐朝'],['岳飞','宋朝'],['康熙','清朝']]
+  const fallbacks: [string, string][] = [
+  ['李白', '唐朝'],
+  ['苏轼', '宋朝'],
+  ['秦始皇', '秦朝'],
+  ['诸葛亮', '三国'],
+  ['武则天', '唐朝'],
+  ['岳飞', '宋朝'],
+  ['康熙', '清朝'],
+]
   const avail = fallbacks.filter(([n]) => !guessed.includes(n))
   return avail.length > 0 ? avail[Math.floor(Math.random() * avail.length)] : fallbacks[Math.floor(Math.random() * fallbacks.length)]
 }
