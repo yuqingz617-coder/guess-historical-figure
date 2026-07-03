@@ -6,7 +6,7 @@
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev",
     "dev": "pnpm run dev:frontend & pnpm run dev:backend",
-    "build:frontend": "pnpm --filter frontend build",
+    "build:frontend": "pnpm --filter guess-historical-figure-frontend build",
     "build:backend": "pnpm --filter backend build",
     "build": "pnpm run build:frontend",
     "vercel-build": "cd frontend && npm install && npm run build"
